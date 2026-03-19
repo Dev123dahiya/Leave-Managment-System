@@ -10,10 +10,25 @@ const generateToken = (userId) =>
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, department } = req.body;
+    const { name, email, password, role, department, managerAuthCode } = req.body;
+    const selectedRole = role || "employee";
 
     if (!name || !email || !password || !department) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (selectedRole === "manager") {
+      if (!process.env.MANAGER_AUTH_CODE) {
+        return res.status(500).json({
+          message: "Manager registration is not configured yet",
+        });
+      }
+
+      if (!managerAuthCode || managerAuthCode !== process.env.MANAGER_AUTH_CODE) {
+        return res.status(403).json({
+          message: "Manager authorization code is invalid",
+        });
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -28,7 +43,7 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || "employee",
+      role: selectedRole,
       department,
     });
 
